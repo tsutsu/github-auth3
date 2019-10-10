@@ -18,93 +18,57 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func getDBPath() string {
-	if os.Geteuid() == 0 {
-		return "/var/cache/github-auth3/db"
-	} else {
-		config_dirs := configdir.New("tsutsu", "github-auth3")
-		cache_dir := config_dirs.QueryCacheFolder()
-		return path.Join(cache_dir.Path, "db")
-	}
-}
-
 func main() {
-	var access_token string
-	var access_token_path string
-	var username string
-	var required_org_name string
+	var (
+		explicitAccessToken string
+		accessTokenPath     string
+		username            string
+		requiredOrgName     string
+		credentialCacheDir  string
+	)
 
-	flag.StringVar(&access_token, "a", "", "Github access token")
-	flag.StringVar(&access_token_path, "apath", "", "Github access token path")
-	flag.StringVar(&required_org_name, "o", "", "Github organization to require membership in")
+	flag.StringVar(&explicitAccessToken, "a", "", "Github access token")
+	flag.StringVar(&accessTokenPath, "apath", "", "Github access token path")
 	flag.StringVar(&username, "u", "", "Github username")
+	flag.StringVar(&requiredOrgName, "o", "", "Github organization to require membership in")
+	flag.StringVar(&credentialCacheDir, "cpath", "", "Credential cache directory")
 
 	flag.Parse()
-
-	if len(access_token_path) > 0 {
-		if len(access_token) > 0 {
-			log.Fatal("cannot set both -a and -apath")
-		}
-
-		access_token_buf, err := ioutil.ReadFile(access_token_path)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		access_token = strings.TrimSuffix(string(access_token_buf), "\n")
-	}
 
 	switch {
 	case len(username) == 0:
 		log.Fatal("username is required")
 
-	case len(required_org_name) == 0:
+	case len(requiredOrgName) == 0:
 		log.Fatal("org name is required")
-
-	case len(access_token) == 0:
-		log.Fatal("access token is required")
 	}
 
-	token := &oauth2.Token{AccessToken: access_token}
-	auth_transport := &oauth2.Transport{Source: oauth2.StaticTokenSource(token)}
+	ctx := context.Background()
 
-	db_path := getDBPath()
-	if err := os.MkdirAll(db_path, 0700); err != nil {
-		log.Fatal(err)
-	}
-
-	db_cache, err := leveldbcache.New(db_path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	caching_transport := &httpcache.Transport{
-		Transport: auth_transport,
-		Cache:     db_cache,
+	authedTransport := &oauth2.Transport{
+		Source: oauth2.StaticTokenSource(getAccessToken(accessTokenPath, explicitAccessToken)),
 	}
 
 	client := github.NewClient(&http.Client{
-		Transport: caching_transport,
+		Transport: maybeCached(authedTransport, credentialCacheDir),
 	})
-
-	ctx := context.Background()
 
 	user_orgs, _, err := client.Organizations.List(ctx, username, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	in_required_org := false
+	isInRequiredOrg := false
 	for _, org := range user_orgs {
-		org_name := *(org.Login)
+		orgName := *(org.Login)
 
-		if org_name == required_org_name {
-			in_required_org = true
+		if orgName == requiredOrgName {
+			isInRequiredOrg = true
 			break
 		}
 	}
 
-	if !in_required_org {
+	if !isInRequiredOrg {
 		os.Exit(0)
 	}
 
@@ -116,5 +80,48 @@ func main() {
 	for _, key := range keys {
 		material := *(key.Key)
 		fmt.Printf("%v\n", material)
+	}
+}
+
+func getAccessToken(tokenPath string, explicitToken string) *oauth2.Token {
+	if len(tokenPath) == 0 {
+		if len(explicitToken) == 0 {
+			log.Fatal("access token is required")
+		}
+
+		return &oauth2.Token{AccessToken: explicitToken}
+	}
+
+	if len(explicitToken) > 0 {
+		log.Fatal("cannot set both -a and -apath")
+	}
+
+	tokenBuf, err := ioutil.ReadFile(tokenPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tokenStr := strings.TrimSuffix(string(tokenBuf), "\n")
+	return &oauth2.Token{AccessToken: tokenStr}
+}
+
+func maybeCached(backingTransport http.RoundTripper, cacheDir string) http.RoundTripper {
+	if len(cacheDir) == 0 {
+		configDirs := configdir.New("tsutsu", "github-auth3")
+		cacheDir = configDirs.QueryCacheFolder().Path
+	}
+
+	if err := os.MkdirAll(cacheDir, 0700); err != nil {
+		return backingTransport
+	}
+
+	ldbCache, err := leveldbcache.New(path.Join(cacheDir, "credentials.db"))
+	if err != nil {
+		return backingTransport
+	}
+
+	return &httpcache.Transport{
+		Transport: backingTransport,
+		Cache:     ldbCache,
 	}
 }
