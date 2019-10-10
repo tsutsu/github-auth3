@@ -14,7 +14,6 @@ import (
 	"github.com/google/go-github/v28/github"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/leveldbcache"
-	"github.com/shibukawa/configdir"
 	"golang.org/x/oauth2"
 )
 
@@ -107,8 +106,7 @@ func getAccessToken(tokenPath string, explicitToken string) *oauth2.Token {
 
 func maybeCached(backingTransport http.RoundTripper, cacheDir string) http.RoundTripper {
 	if len(cacheDir) == 0 {
-		configDirs := configdir.New("tsutsu", "github-auth3")
-		cacheDir = configDirs.QueryCacheFolder().Path
+		return backingTransport
 	}
 
 	if err := os.MkdirAll(cacheDir, 0700); err != nil {
