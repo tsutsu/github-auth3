@@ -6,7 +6,7 @@
 
 1. Create a GitHub organization, or choose one you already have. *Any member of the configured organization will be able to log into the server.*
 
-2. [Generate a GitHub access token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/), with minimal grants, against a user (usually yourself, but this could be an isolated "machine user") who can "see into" the membership of the organization. (For most organizations, all members are publicly visible, so you can do this as any user, even one who is not a member of the organization.)
+2. [Generate a GitHub access token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/), with minimal grants, against a user (usually yourself, but this could be an isolated "machine user") who can "see into" the membership of the organization. (For most organizations, all members are publicly visible, so you can do this as any user, even one who is not a member of the organization. The token is still necessary in such scenarios to raise API request limits.)
 
 3. Create an `sshauthcmd` user:
 
@@ -27,7 +27,7 @@ AuthorizedKeysCommandUser sshauthcmd
 
 ## Enabling caching
 
-`github-auth3` will optionally cache API responses according to the HTTP caching headers in GitHub's API responses. This doesn't matter much normally, but can avoid some pain if your instance is public-visible and gets DDoSed.
+`github-auth3` can optionally make use of a persistent HTTP cache, respecting the caching headers in GitHub's API responses. This doesn't matter much normally, but can avoid some pain if your instance is public-visible and gets DoS-attacked with SSH login attempts.
 
 1. Create a credential-cache directory for `github-auth3` to use:
 
@@ -49,11 +49,9 @@ AuthorizedKeysCommand /usr/local/bin/github-auth3 -a YOUR_GITHUB_ACCESS_TOKEN -c
 
 ## Hardening
 
-If you're worried about having an access token embedded in `/etc/ssh/sshd_config` (despite this token not really being able to do anything much), you can provide a path to a token file instead.
+If you're worried about having an access token embedded in `/etc/ssh/sshd_config` (despite this token not really being able to do anything much), you can provide a path to a file containing your token instead.
 
 You'll probably want to lock down access to the token file itself, but remember that it's the `AuthorizedKeysCommandUser`, not OpenSSH itself, that will need to access this file.
-
-Steps:
 
 1. Create the token file, and secure it:
 
