@@ -26,10 +26,10 @@ func main() {
 		credentialCacheDir  string
 	)
 
-	flag.StringVar(&explicitAccessToken, "a", "", "Github access token")
-	flag.StringVar(&accessTokenPath, "apath", "", "Github access token path")
-	flag.StringVar(&username, "u", "", "Github username")
-	flag.StringVar(&requiredOrgName, "o", "", "Github organization to require membership in")
+	flag.StringVar(&explicitAccessToken, "a", "", "GitHub access token")
+	flag.StringVar(&accessTokenPath, "apath", "", "GitHub access token path")
+	flag.StringVar(&username, "u", "", "GitHub username")
+	flag.StringVar(&requiredOrgName, "o", "", "GitHub organization to require membership in")
 	flag.StringVar(&credentialCacheDir, "cpath", "", "Credential cache directory")
 
 	flag.Parse()

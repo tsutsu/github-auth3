@@ -6,7 +6,7 @@
 
 1. Create a GitHub organization, or choose one you already have. *Any member of the configured organization will be able to log into the server.*
 
-2. [generate a Github access token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/), with minimal grants, against a user (usually yourself, but this could be an isolated "machine user") who can "see into" the membership of the organization. (For most organizations, all members are publicly visible, so you can do this as any user, even one who is not a member of the organization.)
+2. [Generate a GitHub access token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/), with minimal grants, against a user (usually yourself, but this could be an isolated "machine user") who can "see into" the membership of the organization. (For most organizations, all members are publicly visible, so you can do this as any user, even one who is not a member of the organization.)
 
 3. Create an `sshauthcmd` user:
 
