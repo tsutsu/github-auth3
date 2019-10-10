@@ -1,18 +1,21 @@
 package main
 
 import (
-	"os"
-	"log"
-	"path"
-	"net/http"
-	"fmt"
+	"context"
 	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"path"
+	"strings"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v28/github"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/leveldbcache"
-	"golang.org/x/oauth2"
 	"github.com/shibukawa/configdir"
+	"golang.org/x/oauth2"
 )
 
 func getDBPath() string {
@@ -20,31 +23,45 @@ func getDBPath() string {
 		return "/var/cache/github-auth3/db"
 	} else {
 		config_dirs := configdir.New("tsutsu", "github-auth3")
-		cache_dir   := config_dirs.QueryCacheFolder()
+		cache_dir := config_dirs.QueryCacheFolder()
 		return path.Join(cache_dir.Path, "db")
 	}
 }
 
 func main() {
 	var access_token string
+	var access_token_path string
 	var username string
 	var required_org_name string
 
 	flag.StringVar(&access_token, "a", "", "Github access token")
+	flag.StringVar(&access_token_path, "apath", "", "Github access token path")
 	flag.StringVar(&required_org_name, "o", "", "Github organization to require membership in")
 	flag.StringVar(&username, "u", "", "Github username")
 
 	flag.Parse()
 
-	if len(username) == 0 {
+	if len(access_token_path) > 0 {
+		if len(access_token) > 0 {
+			log.Fatal("cannot set both -a and -apath")
+		}
+
+		access_token_buf, err := ioutil.ReadFile(access_token_path)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		access_token = strings.TrimSuffix(string(access_token_buf), "\n")
+	}
+
+	switch {
+	case len(username) == 0:
 		log.Fatal("username is required")
-	}
 
-	if len(required_org_name) == 0 {
+	case len(required_org_name) == 0:
 		log.Fatal("org name is required")
-	}
 
-	if len(access_token) == 0 {
+	case len(access_token) == 0:
 		log.Fatal("access token is required")
 	}
 
