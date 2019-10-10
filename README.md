@@ -12,6 +12,17 @@
 
 ```
 AuthorizedKeysCommand /usr/local/bin/github-auth3 -a YOUR_GITHUB_ACCESS_TOKEN -o YOUR_ORG_NAME -u %u
+AuthorizedKeysCommandUser sshauthcmd
+```
+
+4. Create the `sshauthcmd` user, and a credential-cache directory for `github-auth3` to use:
+
+```bash
+#!/bin/sh
+sudo adduser --system sshauthcmd
+sudo mkdir -p '/var/cache/github-auth3'
+sudo chown sshauthcmd:root '/var/cache/github-auth3'
+sudo chmod 0700 '/var/cache/github-auth3'
 ```
 
 4. Restart the `sshd` service (`sudo systemctl restart sshd` or equivalent.)
@@ -24,23 +35,11 @@ If you're worried about having an access token embedded in `/etc/ssh/sshd_config
 AuthorizedKeysCommand /usr/local/bin/github-auth3 -apath /etc/ssh/github_access_token -o YOUR_ORG_NAME -u %u
 ```
 
-You'll probably want to lock down access to the token file itself, but remember that it's `github-auth3`, not OpenSSH itself, that will need to access this file. For isolation, OpenSSH spawns its `AuthorizedKeysCommand` as a different user. Normally, this is the `nobody` user. You'll probably want to create another user, e.g.:
+You'll probably want to lock down access to the token file itself, but remember that it's `github-auth3`, not OpenSSH itself, that will need to access this file. The file will need to be owned by the `AuthorizedKeysCommandUser` (`sshauthcmd` above):
 
 ```bash
 #!/bin/sh
-adduser --system sshauthcmd
-```
-
-...and then configure OpenSSH to use it for the `AuthorizedKeysCommand`:
-
-```
-AuthorizedKeysCommandUser sshauthcmd
-```
-
-You can then lock down the access to the token file to only this user:
-
-```bash
-#!/bin/sh
-chown sshauthcmd:root /etc/ssh/github_access_token
-chmod 0400 /etc/ssh/github_access_token
+sudo touch /etc/ssh/github_access_token
+sudo chown sshauthcmd:root /etc/ssh/github_access_token
+sudo chmod 0400 /etc/ssh/github_access_token
 ```
