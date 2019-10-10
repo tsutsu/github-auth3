@@ -83,16 +83,6 @@ func main() {
 		Cache:     db_cache,
 	}
 
-	// hoarding_transport := &apiproxy.RevalidationTransport{
-	// 	Transport: caching_transport,
-	// 	Check: (&githubproxy.MaxAge{
-	// 		User:         time.Hour * 24,
-	// 		Repository:   time.Hour * 24,
-	// 		Repositories: time.Hour * 24,
-	// 		Activity:     time.Hour * 12,
-	// 	}).Validator(),
-	// }
-
 	client := github.NewClient(&http.Client{
 		Transport: caching_transport,
 	})
