@@ -87,36 +87,34 @@ func main() {
 		Transport: caching_transport,
 	})
 
+	ctx := context.Background()
 
-
-	user_orgs, _, err := client.Organizations.List("tsutsu", nil)
+	user_orgs, _, err := client.Organizations.List(ctx, username, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	user_orgs_set := make(map[string]bool)
+	in_required_org := false
 	for _, org := range user_orgs {
 		org_name := *(org.Login)
-		user_orgs_set[org_name] = true
+
+		if org_name == required_org_name {
+			in_required_org = true
+			break
+		}
 	}
 
-	if !user_orgs_set[required_org_name] {
+	if !in_required_org {
 		os.Exit(0)
 	}
 
-
-	keys, _, err := client.Users.ListKeys(username, nil)
+	keys, _, err := client.Users.ListKeys(ctx, username, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var keys_materials []string
 	for _, key := range keys {
 		material := *(key.Key)
-		keys_materials = append(keys_materials, material)
-	}
-
-	for _, material := range keys_materials {
 		fmt.Printf("%v\n", material)
 	}
 }
