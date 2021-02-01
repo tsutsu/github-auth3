@@ -23,6 +23,7 @@ func main() {
 		accessTokenPath     string
 		username            string
 		requiredOrgName     string
+		optionalTeamName    string
 		credentialCacheDir  string
 	)
 
@@ -30,6 +31,7 @@ func main() {
 	flag.StringVar(&accessTokenPath, "apath", "", "GitHub access token path")
 	flag.StringVar(&username, "u", "", "GitHub username")
 	flag.StringVar(&requiredOrgName, "o", "", "GitHub organization to require membership in")
+	flag.StringVar(&optionalTeamName, "t", "", "GitHub team to require (if specified) membership in")
 	flag.StringVar(&credentialCacheDir, "cpath", "", "Credential cache directory")
 
 	flag.Parse()
@@ -52,22 +54,23 @@ func main() {
 		Transport: maybeCached(authedTransport, credentialCacheDir),
 	})
 
-	user_orgs, _, err := client.Organizations.List(ctx, username, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	isInRequiredOrg := false
-	for _, org := range user_orgs {
-		orgName := *(org.Login)
-
-		if orgName == requiredOrgName {
-			isInRequiredOrg = true
-			break
+	meetsMembershipReqs := false
+	switch {
+	case len(optionalTeamName) > 0:
+		membership, _, err := client.Teams.GetTeamMembershipBySlug(ctx, requiredOrgName, optionalTeamName, username)
+		if err != nil {
+			log.Fatal(err)
 		}
+		meetsMembershipReqs = *membership.State == "active"
+	default:
+		isMember, _, err := client.Organizations.IsMember(ctx, requiredOrgName, username)
+		if err != nil {
+			log.Fatal(err)
+		}
+		meetsMembershipReqs = isMember
 	}
 
-	if !isInRequiredOrg {
+	if !meetsMembershipReqs {
 		os.Exit(0)
 	}
 
