@@ -11,7 +11,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/go-github/v28/github"
+	"github.com/google/go-github/v33/github"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/leveldbcache"
 	"golang.org/x/oauth2"
