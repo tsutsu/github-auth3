@@ -1,6 +1,7 @@
 # github-auth3
 
-`github-auth3` is a plugin for OpenBSD SSHD (specifically, an `AuthorizedKeysCommand`) which allows users to authenticate themselves to machines configured with it by supplying the usernames of their GitHub accounts, and then doing SSH pubkey auth against any public key attached to those GitHub accounts. Access is controlled by membership to a specified GitHub organization.
+`github-auth3` is a plugin for OpenBSD SSHD (specifically, an `AuthorizedKeysCommand`) which allows users to authenticate themselves to machines configured with it by supplying the usernames of their GitHub accounts, and then doing SSH pubkey auth against any public key attached to those GitHub accounts. Access is controlled by membership to a specified GitHub organization, and optionally specified teams within the organization.
+
 
 ## Installation
 
@@ -23,6 +24,15 @@ AuthorizedKeysCommandUser sshauthcmd
 ```
 
 5. Restart the `sshd` service (`sudo systemctl restart sshd` or equivalent.)
+
+
+## Restricting to specific Github teams within your organization
+
+Just add the `-t` flag, passing a comma-separated list of acceptable team slug-names:
+
+```
+AuthorizedKeysCommand /usr/local/bin/github-auth3 -a YOUR_GITHUB_ACCESS_TOKEN -o YOUR_ORG_NAME -t TEAM1,TEAM2 -u %u
+```
 
 
 ## Enabling caching

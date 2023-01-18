@@ -11,7 +11,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/go-github/v28/github"
+	"github.com/google/go-github/v49/github"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/leveldbcache"
 	"golang.org/x/oauth2"
@@ -23,6 +23,7 @@ func main() {
 		accessTokenPath     string
 		username            string
 		requiredOrgName     string
+		requiredTeamNames   string
 		credentialCacheDir  string
 	)
 
@@ -30,6 +31,7 @@ func main() {
 	flag.StringVar(&accessTokenPath, "apath", "", "GitHub access token path")
 	flag.StringVar(&username, "u", "", "GitHub username")
 	flag.StringVar(&requiredOrgName, "o", "", "GitHub organization to require membership in")
+	flag.StringVar(&requiredTeamNames, "t", "", "GitHub teams to require membership in (comma separated)")
 	flag.StringVar(&credentialCacheDir, "cpath", "", "Credential cache directory")
 
 	flag.Parse()
@@ -52,23 +54,48 @@ func main() {
 		Transport: maybeCached(authedTransport, credentialCacheDir),
 	})
 
-	user_orgs, _, err := client.Organizations.List(ctx, username, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	if len(requiredTeamNames) > 0 {
+		isInRequiredTeams := false
+		teamNames := strings.Split(requiredTeamNames, ",")
 
-	isInRequiredOrg := false
-	for _, org := range user_orgs {
-		orgName := *(org.Login)
+		for _, teamName := range teamNames {
+			user_team_membership, resp, err := client.Teams.GetTeamMembershipBySlug(ctx, requiredOrgName, teamName, username)
+			if err != nil {
+				if resp.StatusCode == 404 {
+					continue
+				}
 
-		if orgName == requiredOrgName {
-			isInRequiredOrg = true
-			break
+				log.Fatal(err)
+			}
+
+			if user_team_membership != nil {
+				isInRequiredTeams = true
+				break
+			}
 		}
-	}
 
-	if !isInRequiredOrg {
-		os.Exit(0)
+		if !isInRequiredTeams {
+			os.Exit(0)
+		}
+	} else {
+		user_orgs, _, err := client.Organizations.List(ctx, username, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		isInRequiredOrg := false
+		for _, org := range user_orgs {
+			orgName := *(org.Login)
+
+			if orgName == requiredOrgName {
+				isInRequiredOrg = true
+				break
+			}
+		}
+
+		if !isInRequiredOrg {
+			os.Exit(0)
+		}
 	}
 
 	keys, _, err := client.Users.ListKeys(ctx, username, nil)
